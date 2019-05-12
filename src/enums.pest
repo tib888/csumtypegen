@@ -1,0 +1,38 @@
+//string = @{ "\"" ~ inner ~ "\"" }
+//inner = @{ (!("\"" | "\\" | "\u{0000}" | "\u{001F}") ~ ANY)* ~ (escape ~ inner)? }
+
+//string = {"\"" ~ ("\\\"" | ^"\"")* ~ "\""}
+//string2 = {"<" ~ (^">")* ~ ">"}
+//include = { "#include" ~ (string | string2) }
+
+short_comment = @{ "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
+long_comment = @{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+COMMENT = { short_comment | long_comment }
+
+alpha = { 'a'..'z' | 'A'..'Z' }
+alpha_ = { alpha | "_" }
+digit = { '0'..'9' }
+
+identifier = @{ alpha_ ~ (alpha_ | digit)* }
+type_name = @{ identifier }
+namespace_name = @{ identifier }
+
+type_reference = { ("const")? ~ (namespace_name ~ "::")* ~ type_name ~ ("<" ~ type_reference ~ ("," ~ type_reference)* ~ ">")? ~ (("const")? ~ "*")* ~ ("const"? ~ "&")? }
+
+simple_sumtype_item = @{ identifier }
+typed_sumtype_item = { identifier ~ "(" ~ type_reference ~ ")" }
+
+semicolon = @{ ";" }
+sumtype_item = { (typed_sumtype_item | simple_sumtype_item) ~ semicolon }
+
+curly_open = @{ "{" }
+curly_close = @{ "}" }
+
+sumtype_definition = { "sumtype" ~ type_name ~ curly_open ~ (sumtype_item)* ~ curly_close ~ (semicolon)? }
+
+fill = @{ (!"sumtype" ~ ANY)* }
+tail = @{ (ANY)* }
+
+file = _{ SOI ~ (fill ~ sumtype_definition)* ~ tail ~ EOI }
+
+WHITESPACE = { " " | "\t" | NEWLINE }
